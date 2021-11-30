@@ -1,6 +1,9 @@
 const crypto = require("crypto");
 const fs = require("fs");
-require('dotenv').config();
+require('dotenv').config({ path: "../.env" });
+
+const secretKey = process.env.SECRET;
+console.log(secretKey)
 
 function generateKeypair() {
   const keypair = crypto.generateKeyPair(
@@ -15,7 +18,7 @@ function generateKeypair() {
         type: "pkcs8",
         format: "pem",
         cipher: "aes-256-cbc",
-        passphrase: process.env.SECRET,
+        passphrase: secretKey,
       },
     },
     (err, publicKey, privateKey) => {
