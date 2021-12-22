@@ -1,9 +1,9 @@
 const jsonwebtoken = require("jsonwebtoken");
 require("dotenv").config({ path: "../.env" });
-const path = require('path')
+const path = require('path');
+const { Worker } = require('worker_threads')
 
-const issueJWT = (_id) => {
-  const expiresIn = "1d";
+const issueJWT = (_id, expiresIn = '1d') => {
 
   const payload = {
     sub: _id,
@@ -31,7 +31,7 @@ const verifyJWTMiddleware = (request, response, next) => {
   ) {
     try {
       const token = jsonwebtoken.verify(token, process.env.JWT_KEY, {
-        algorithms: ["RS256"],
+        algorithms: ["HS256"],
       });
       request.token = token;
       next();
@@ -43,7 +43,30 @@ const verifyJWTMiddleware = (request, response, next) => {
   }
 };
 
+const verifyJWT = (request) => {
+  const tokenParts = request.headers.authorization.split(" ");
+  const token = tokenParts[1]
+  try {
+    if (
+      tokenParts[0] === "Bearer"
+    ) {
+      const payload = jsonwebtoken.verify(token, process.env.JWT_KEY, {
+        algorithms: ["HS256"],
+      });
+      if(payload) {
+        return payload
+      } 
+      throw Error("invalid token")
+    }else {
+      throw Error("Unauthorized")
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
 module.exports = {
   verifyJWTMiddleware,
-  issueJWT
+  issueJWT,
+  verifyJWT
 };

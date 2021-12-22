@@ -14,7 +14,8 @@ const userSchema = new mongoose.Schema({
     },
     username: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     email: {
         type: String,
@@ -29,10 +30,7 @@ const userSchema = new mongoose.Schema({
         minlength: [8, "password must be up to eight characters in length"],
         //validate: [validatePassword, ""]
     },
-    salt: {
-        type: String,
-        required: false
-    },
+    salt: String,
     isValidated: {
         type: Boolean,
         default: false
@@ -41,10 +39,7 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    dateOfBirth: {
-        type: Date,
-        default: new Date()
-    },
+    dateOfBirth: Date,
     gender: String,
     isAdmin: {
         type: Boolean, 
@@ -54,6 +49,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false
     },
+    imageUrl: String
 });
 
 userSchema.statics.login = async function(email, password, isEmail) {
@@ -73,6 +69,16 @@ userSchema.statics.login = async function(email, password, isEmail) {
         }
     } else {
         throw Error("Email does not exist")
+    }
+}
+
+userSchema.statics.changePassword = async function(id, password) {
+    const { hash, salt } = generatePassword(password);
+    try {
+        const user = await this.findOneAndUpdate({ _id: id }, { password: hash, salt: salt })
+        return user;
+    } catch (error) {
+        throw error;
     }
 }
 

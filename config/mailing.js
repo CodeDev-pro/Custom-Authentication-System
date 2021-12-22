@@ -4,54 +4,59 @@ const { open, close, readFileSync, existsSync } = require("fs");
 const htmlToText = require("html-to-text");
 const ejs = require("ejs");
 const juice = require("juice");
+const path = require('path');
+const { createOtp } = require('./otp_authentication')
+const Otp = require('../models/otp')
 
-const transporter = nodeMailer.createTransport({
-  host: "in-v3.mailjet.com",
+const transport = nodeMailer.createTransport({
+  host: 'smtp-relay.sendinblue.com',
   port: 587,
-  secure: false,
   auth: {
-    user: "eb5e3e868570e05de2f3621e392002df",
-    pass: "d476200347c636b1b2a904a31f80d220",
-  },
-  tls: {
-    ciphers: "SSLv3",
-  },
+    user: "coded.developer098@gmail.com",
+    pass: "jykR59SVWgHIncPQ"
+  }
 });
 
-const sendMail = async ({
-  template: templateName,
-  templateVars,
-  ...others
-}) => {
-  const templatePath = `../views/mail.ejs`;
+
+const createTemplate = async ({ templateVars, ...others }) => {
+  const templatePath = path.join(__dirname, `../views/mail.ejs`);
   const options = { ...others };
-  if (templateName && existsSync(templatePath)) {
+  if (existsSync(templatePath)) {
     const template = readFileSync(templatePath, "utf-8");
     const html = ejs.render(template, templateVars);
-    const text = htmlToText.compile(html);
+    const text = htmlToText.compile()(html);
     const htmlWithStylesInlined = juice(html);
     options.html = htmlWithStylesInlined;
     options.text = text;
-  }
 
-  return transporter.sendMail(options);
+    return {
+      text: text,
+      html: htmlWithStylesInlined,
+      options: { ...others }
+    }
+  } 
+  throw Error("file does not exist")
+
 };
 
-const send = async () => {
+async function sendMail(email) {
+
+  const code = createOtp()
+  const template = await createTemplate({ templateVars: { code } })
+
   try {
-    const result = await sendMail({
-      to: "emmanuelstanley753@gmail.com",
-      from: "codedev-pro@no-reply.com",
-      subject: "test",
-      template: "send_email",
-      templateVars: {
-        timestamp: Date.now(),
-      },
-    });
-    console.log(result)
+    const otp = await Otp.create({ code, email });
+    transport.sendMail({
+      to: email,
+      from: 'Coded Developers <codeddeveloper@auth.com>',
+      subject: 'Email Authentication',
+      html: template.html,
+    })
   } catch (error) {
-    console.log(error);
+    console.log(error.message);
+    throw error
   }
-};
 
-send()
+}
+
+module.exports.sendMail = sendMail;
